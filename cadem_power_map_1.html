@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CADEM Power Map — Rusty Hicks & the California Democratic Party</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #05111f;
+    --surface: #0a1e32;
+    --surface2: #102840;
+    --surface3: #163352;
+    --border: rgba(100,160,230,0.12);
+    --border2: rgba(100,160,230,0.22);
+    --text: #ddeeff;
+    --text2: #7aaac8;
+    --text3: #3a6080;
+    --accent: #4a9eda;
+    --accent2: #2a78b8;
+    --red: #e05a5a;
+    --panel-w: 390px;
+    --c-legit:    #4a9eda;
+    --c-reward:   #3daa7a;
+    --c-referent: #c97d3a;
+    --c-expert:   #9b6bc4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+  header { display: flex; align-items: center; justify-content: space-between; padding: 14px 32px; border-bottom: 1px solid var(--border2); background: var(--surface); position: sticky; top: 0; z-index: 100; }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .dem-star { font-size: 20px; color: var(--accent); }
+  .header-title h1 { font-family: 'Libre Baskerville', serif; font-size: 15px; font-weight: 700; color: var(--accent); letter-spacing: 0.02em; }
+  .header-title p { font-size: 11px; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 2px; }
+
+  .view-toggle { display: flex; gap: 4px; background: var(--bg); border: 1px solid var(--border2); border-radius: 8px; padding: 4px; }
+  .view-toggle button { font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; padding: 7px 18px; border-radius: 5px; border: none; cursor: pointer; color: var(--text2); background: transparent; transition: all 0.2s; letter-spacing: 0.02em; }
+  .view-toggle button.active { background: var(--surface3); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.5); }
+
+  .app-body { display: flex; height: calc(100vh - 53px); overflow: hidden; }
+  .diagram-area { flex: 1; overflow: auto; padding: 24px 32px 32px; transition: margin-right 0.3s ease; }
+  .diagram-area.panel-open { margin-right: var(--panel-w); }
+
+  .side-panel { position: fixed; right: 0; top: 53px; width: var(--panel-w); height: calc(100vh - 53px); background: var(--surface); border-left: 1px solid var(--border2); transform: translateX(100%); transition: transform 0.3s ease; overflow-y: auto; z-index: 50; display: flex; flex-direction: column; }
+  .side-panel.open { transform: translateX(0); }
+  .panel-header { padding: 18px 22px 14px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 1; }
+  .panel-close { position: absolute; top: 14px; right: 14px; background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px; padding: 4px 8px; border-radius: 4px; transition: color 0.2s; }
+  .panel-close:hover { color: var(--text); }
+  .panel-node-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text3); margin-bottom: 5px; }
+  .panel-title { font-family: 'Libre Baskerville', serif; font-size: 16px; font-weight: 700; color: var(--text); line-height: 1.3; }
+  .panel-subtitle { font-size: 11px; color: var(--text2); margin-top: 4px; }
+  .panel-body { padding: 18px 22px; flex: 1; }
+  .panel-section { margin-bottom: 22px; }
+  .panel-section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; font-weight: 600; }
+  .panel-section-label.powers { color: var(--accent); }
+  .panel-section-label.limits { color: var(--red); }
+  .panel-section-label.context { color: var(--text3); }
+  .panel-item { margin-bottom: 8px; padding: 10px 12px; background: var(--surface2); border-radius: 6px; border-left: 2px solid var(--border2); }
+  .panel-item.power { border-left-color: var(--accent); }
+  .panel-item.limit { border-left-color: var(--red); }
+  .panel-item.ctx   { border-left-color: var(--text3); }
+  .panel-item p { font-size: 12.5px; line-height: 1.6; color: var(--text); }
+  .panel-item .cite { font-size: 10px; color: var(--text3); margin-top: 5px; font-style: italic; }
+
+  .power-toolbar { padding: 0 32px 16px; display: none; gap: 8px; flex-wrap: wrap; }
+  .power-toolbar.visible { display: flex; }
+  .power-btn { font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; padding: 7px 16px; border-radius: 20px; border: 1.5px solid transparent; cursor: pointer; transition: all 0.2s; background: var(--surface2); color: var(--text2); }
+  .power-btn[data-type="legitimate"] { border-color: var(--c-legit); }
+  .power-btn[data-type="reward"]     { border-color: var(--c-reward); }
+  .power-btn[data-type="referent"]   { border-color: var(--c-referent); }
+  .power-btn[data-type="expert"]     { border-color: var(--c-expert); }
+  .power-btn.active[data-type="legitimate"] { background: var(--c-legit); color: #fff; }
+  .power-btn.active[data-type="reward"]     { background: var(--c-reward); color: #fff; }
+  .power-btn.active[data-type="referent"]   { background: var(--c-referent); color: #fff; }
+  .power-btn.active[data-type="expert"]     { background: var(--c-expert); color: #fff; }
+
+  .power-desc { padding: 0 32px 14px; display: none; }
+  .power-desc.visible { display: block; }
+  .power-desc-card { padding: 11px 15px; border-radius: 8px; font-size: 12.5px; line-height: 1.6; color: var(--text); background: var(--surface2); border-left: 3px solid; max-width: 720px; }
+  .power-desc-card[data-type="legitimate"] { border-color: var(--c-legit); }
+  .power-desc-card[data-type="reward"]     { border-color: var(--c-reward); }
+  .power-desc-card[data-type="referent"]   { border-color: var(--c-referent); }
+  .power-desc-card[data-type="expert"]     { border-color: var(--c-expert); }
+
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; padding: 0 32px 14px; align-items: center; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text2); }
+  .legend-dot  { width: 10px; height: 10px; border-radius: 50%; }
+  .legend-line { width: 26px; height: 2px; border-radius: 1px; }
+
+  .node-group { cursor: pointer; }
+  .node-group rect { transition: filter 0.15s; }
+  .node-group:hover rect { filter: brightness(1.3); }
+  .node-group.selected rect { filter: brightness(1.5); stroke-width: 2.5 !important; }
+
+  .arrow-power { transition: opacity 0.35s; }
+  .hint { text-align: center; font-size: 11.5px; color: var(--text3); padding: 6px 0 0; letter-spacing: 0.02em; }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-left">
+    <span class="dem-star">&#9733;</span>
+    <div class="header-title">
+      <h1>CADEM Power Map</h1>
+      <p>Chair Rusty Hicks &mdash; Authority, Constraints &amp; Coalition Power</p>
+    </div>
+  </div>
+  <div class="view-toggle">
+    <button class="active" onclick="setView('formal')">Formal Power &amp; Limits</button>
+    <button onclick="setView('power')">Power Type Flow</button>
+  </div>
+</header>
+<div class="app-body">
+<div class="diagram-area" id="diagramArea">
+
+  <div class="power-toolbar" id="powerToolbar">
+    <button class="power-btn active" data-type="legitimate" onclick="setPowerType('legitimate')">&#9878; Legitimate</button>
+    <button class="power-btn" data-type="reward"     onclick="setPowerType('reward')">Reward / Coercive</button>
+    <button class="power-btn" data-type="referent"   onclick="setPowerType('referent')">Referent</button>
+    <button class="power-btn" data-type="expert"     onclick="setPowerType('expert')">Expert</button>
+  </div>
+
+  <div class="power-desc" id="powerDesc">
+    <div class="power-desc-card" data-type="legitimate" id="desc-legitimate">
+      <strong>Legitimate power</strong> flows from the Chair's formal title and bylaw-granted authority. It operates downward through CADEM's hierarchy &mdash; committee appointments, convention chairship, endorsing caucus designation, and agenda control.
+    </div>
+    <div class="power-desc-card" data-type="reward" id="desc-reward" style="display:none">
+      <strong>Reward &amp; Coercive power</strong> &mdash; internally, the Chair rewards through committee appointments and process timing; coercive leverage is indirect. Externally, this power is nearly absent &mdash; the Chair cannot compel candidates, donors, or PACs.
+    </div>
+    <div class="power-desc-card" data-type="referent" id="desc-referent" style="display:none">
+      <strong>Referent power</strong> derives from Hicks' personal relationships and labor movement credibility (UFCW). It flows outward toward electeds, activists, and press &mdash; entities the bylaws give him no formal authority over.
+    </div>
+    <div class="power-desc-card" data-type="expert" id="desc-expert" style="display:none">
+      <strong>Expert power</strong> comes from Hicks' knowledge of California political geography, coalition dynamics, and electoral mechanics. Candidates and legislative leaders seek his read on races even when they don't need his formal approval.
+    </div>
+  </div>
+
+  <div class="legend" id="formalLegend">
+    <div class="legend-item"><div class="legend-dot" style="background:#4a9eda"></div> State Chair</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#2f6fa8"></div> Internal CADEM body</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#1e3a52"></div> External entity</div>
+    <div class="legend-item"><div class="legend-line" style="background:#4a9eda"></div> <span style="color:#4a9eda">Chair holds power</span></div>
+    <div class="legend-item"><div class="legend-line" style="background:#e05a5a"></div> <span style="color:#e05a5a">Chair is constrained</span></div>
+    <div class="legend-item"><div class="legend-line" style="background:#3a6080"></div> Indirect / informal</div>
+  </div>
+  <div class="legend" id="powerLegend" style="display:none">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--c-legit)"></div> Legitimate</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--c-reward)"></div> Reward / Coercive</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--c-referent)"></div> Referent</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--c-expert)"></div> Expert</div>
+    <div class="legend-item" style="color:var(--text3)">Arrow thickness = strength of power</div>
+  </div>
+
+  <p class="hint" id="formalHint">Click any node to see powers and bylaw constraints</p>
+  <p class="hint" id="powerHint" style="display:none">Select a power type above &middot; Click any node for detail</p>
+
+  <svg id="diagram-svg" viewBox="0 0 860 500" xmlns="http://www.w3.org/2000/svg"
+       style="display:block;max-width:860px;margin:14px auto 0;width:100%">
+    <defs>
+      <marker id="arr-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="#4a9eda" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+      <marker id="arr-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="#e05a5a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+      <marker id="arr-dim" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="#3a6080" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+      <marker id="arr-legit"    viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="#4a9eda" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+      <marker id="arr-reward"   viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="#3daa7a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+      <marker id="arr-referent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="#c97d3a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+      <marker id="arr-expert"   viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="#9b6bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+    </defs>
+
+    <!-- FORMAL ARROWS -->
+    <line class="formal-arrow" x1="430" y1="108" x2="430" y2="126" stroke="#e05a5a" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arr-red)" opacity="0.7"/>
+    <path class="formal-arrow" d="M335 80 Q200 60 200 173" fill="none" stroke="#4a9eda" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+    <path class="formal-arrow" d="M525 80 Q660 60 665 173" fill="none" stroke="#4a9eda" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+    <path class="formal-arrow" d="M408 128 L398 110" fill="none" stroke="#e05a5a" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#arr-red)" opacity="0.55"/>
+    <path class="formal-arrow" d="M380 198 Q340 155 370 112" fill="none" stroke="#e05a5a" stroke-width="1.3" stroke-dasharray="5 3" marker-end="url(#arr-red)" opacity="0.65"/>
+    <path class="formal-arrow" d="M430 108 L430 268" fill="none" stroke="#3a6080" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#arr-dim)" opacity="0.6"/>
+    <path class="formal-arrow" d="M240 262 Q295 255 328 120" fill="none" stroke="#e05a5a" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arr-red)" opacity="0.55"/>
+    <path class="formal-arrow" d="M240 320 Q302 302 332 132" fill="none" stroke="#e05a5a" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arr-red)" opacity="0.45"/>
+    <line class="formal-arrow" x1="145" y1="227" x2="145" y2="246" stroke="#2f6fa8" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr-blue)" opacity="0.45"/>
+    <path class="formal-arrow" d="M514 400" fill="none" stroke="#e05a5a" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arr-red)" opacity="0.5"/>
+    <path class="formal-arrow" d="M514 400 Q514 270 490 183" fill="none" stroke="#e05a5a" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arr-red)" opacity="0.5"/>
+    <path class="formal-arrow" d="M682 400 Q700 230 502 182" fill="none" stroke="#3a6080" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr-dim)" opacity="0.35"/>
+    <path class="formal-arrow" d="M472 108 Q580 80 655 398" fill="none" stroke="#3a6080" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr-dim)" opacity="0.35"/>
+    <path class="formal-arrow" d="M445 108 Q460 260 514 398" fill="none" stroke="#3a6080" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr-dim)" opacity="0.35"/>
+    <path class="formal-arrow" d="M420 108 Q390 260 363 398" fill="none" stroke="#3a6080" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr-dim)" opacity="0.35"/>
+    <path class="formal-arrow" d="M405 108 Q320 250 225 398" fill="none" stroke="#3a6080" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr-dim)" opacity="0.35"/>
+    <path class="formal-arrow" d="M395 108 Q270 240 100 398" fill="none" stroke="#3a6080" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr-dim)" opacity="0.35"/>
+
+    <!-- LEGITIMATE ARROWS (thickness = strength) -->
+    <path class="arrow-power legitimate" d="M335 80 Q200 60 200 173" fill="none" stroke="#4a9eda" stroke-width="5.5" marker-end="url(#arr-legit)" opacity="0"/>
+    <path class="arrow-power legitimate" d="M525 80 Q660 60 665 173" fill="none" stroke="#4a9eda" stroke-width="3" marker-end="url(#arr-legit)" opacity="0"/>
+    <line class="arrow-power legitimate" x1="430" y1="108" x2="430" y2="126" stroke="#4a9eda" stroke-width="2.5" marker-end="url(#arr-legit)" opacity="0"/>
+    <path class="arrow-power legitimate" d="M430 108 L430 268" fill="none" stroke="#4a9eda" stroke-width="1" stroke-dasharray="5 3" marker-end="url(#arr-legit)" opacity="0"/>
+    <path class="arrow-power legitimate" d="M395 108 Q270 240 100 398" fill="none" stroke="#4a9eda" stroke-width="3" marker-end="url(#arr-legit)" opacity="0"/>
+    <path class="arrow-power legitimate" d="M340 80 Q185 50 140 244" fill="none" stroke="#4a9eda" stroke-width="2.5" marker-end="url(#arr-legit)" opacity="0"/>
+    <path class="arrow-power legitimate" d="M472 108 Q580 80 655 398" fill="none" stroke="#4a9eda" stroke-width="0.8" stroke-dasharray="3 4" marker-end="url(#arr-legit)" opacity="0"/>
+
+    <!-- REWARD ARROWS (thickness = strength) -->
+    <path class="arrow-power reward" d="M335 80 Q200 60 200 173" fill="none" stroke="#3daa7a" stroke-width="6" marker-end="url(#arr-reward)" opacity="0"/>
+    <path class="arrow-power reward" d="M525 80 Q660 60 665 173" fill="none" stroke="#3daa7a" stroke-width="3.5" marker-end="url(#arr-reward)" opacity="0"/>
+    <line class="arrow-power reward" x1="430" y1="108" x2="430" y2="126" stroke="#3daa7a" stroke-width="1.2" marker-end="url(#arr-reward)" opacity="0"/>
+    <path class="arrow-power reward" d="M472 108 Q580 80 655 398" fill="none" stroke="#3daa7a" stroke-width="0.8" stroke-dasharray="3 5" marker-end="url(#arr-reward)" opacity="0"/>
+    <path class="arrow-power reward" d="M420 108 Q390 260 363 398" fill="none" stroke="#3daa7a" stroke-width="0.7" stroke-dasharray="2 5" marker-end="url(#arr-reward)" opacity="0"/>
+    <path class="arrow-power reward" d="M405 108 Q320 250 225 398" fill="none" stroke="#3daa7a" stroke-width="0.7" stroke-dasharray="2 5" marker-end="url(#arr-reward)" opacity="0"/>
+    <path class="arrow-power reward" d="M445 108 Q460 260 514 398" fill="none" stroke="#3daa7a" stroke-width="0.6" stroke-dasharray="2 6" marker-end="url(#arr-reward)" opacity="0"/>
+
+    <!-- REFERENT ARROWS (thickness = strength) -->
+    <path class="arrow-power referent" d="M472 108 Q580 80 655 398" fill="none" stroke="#c97d3a" stroke-width="5" marker-end="url(#arr-referent)" opacity="0"/>
+    <path class="arrow-power referent" d="M405 108 Q320 250 225 398" fill="none" stroke="#c97d3a" stroke-width="4.5" marker-end="url(#arr-referent)" opacity="0"/>
+    <path class="arrow-power referent" d="M395 108 Q270 240 100 398" fill="none" stroke="#c97d3a" stroke-width="3.5" marker-end="url(#arr-referent)" opacity="0"/>
+    <path class="arrow-power referent" d="M445 108 Q460 260 514 398" fill="none" stroke="#c97d3a" stroke-width="3" marker-end="url(#arr-referent)" opacity="0"/>
+    <path class="arrow-power referent" d="M420 108 Q390 260 363 398" fill="none" stroke="#c97d3a" stroke-width="2.5" marker-end="url(#arr-referent)" opacity="0"/>
+    <line class="arrow-power referent" x1="430" y1="108" x2="430" y2="126" stroke="#c97d3a" stroke-width="2" marker-end="url(#arr-referent)" opacity="0"/>
+    <path class="arrow-power referent" d="M430 108 L430 268" fill="none" stroke="#c97d3a" stroke-width="2.5" marker-end="url(#arr-referent)" opacity="0"/>
+    <path class="arrow-power referent" d="M340 80 Q185 50 140 244" fill="none" stroke="#c97d3a" stroke-width="1.5" marker-end="url(#arr-referent)" opacity="0"/>
+
+    <!-- EXPERT ARROWS (thickness = strength) -->
+    <path class="arrow-power expert" d="M472 108 Q580 80 655 398" fill="none" stroke="#9b6bc4" stroke-width="5" marker-end="url(#arr-expert)" opacity="0"/>
+    <path class="arrow-power expert" d="M445 108 Q460 260 514 398" fill="none" stroke="#9b6bc4" stroke-width="4.5" marker-end="url(#arr-expert)" opacity="0"/>
+    <path class="arrow-power expert" d="M380 198 Q345 158 374 114" fill="none" stroke="#9b6bc4" stroke-width="3.5" marker-end="url(#arr-expert)" opacity="0"/>
+    <path class="arrow-power expert" d="M525 80 Q660 60 665 173" fill="none" stroke="#9b6bc4" stroke-width="3" marker-end="url(#arr-expert)" opacity="0"/>
+    <line class="arrow-power expert" x1="430" y1="108" x2="430" y2="126" stroke="#9b6bc4" stroke-width="2" marker-end="url(#arr-expert)" opacity="0"/>
+    <path class="arrow-power expert" d="M335 80 Q200 60 200 173" fill="none" stroke="#9b6bc4" stroke-width="2" marker-end="url(#arr-expert)" opacity="0"/>
+    <path class="arrow-power expert" d="M395 108 Q270 240 100 398" fill="none" stroke="#9b6bc4" stroke-width="2" marker-end="url(#arr-expert)" opacity="0"/>
+    <path class="arrow-power expert" d="M420 108 Q390 260 363 398" fill="none" stroke="#9b6bc4" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arr-expert)" opacity="0"/>
+    <path class="arrow-power expert" d="M405 108 Q320 250 225 398" fill="none" stroke="#9b6bc4" stroke-width="1" stroke-dasharray="4 4" marker-end="url(#arr-expert)" opacity="0"/>
+
+    <!-- STATE CHAIR -->
+    <g class="node-group" id="node-chair" onclick="selectNode('chair')">
+      <rect x="305" y="52" width="250" height="56" rx="10" fill="#0c2a4a" stroke="#4a9eda" stroke-width="2"/>
+      <text font-family="Libre Baskerville,serif" font-size="13" font-weight="700" fill="#7ec8f0" text-anchor="middle" x="430" y="75">State Chair</text>
+      <text font-family="DM Sans,sans-serif" font-size="11" fill="#4a9eda" text-anchor="middle" x="430" y="94">Rusty Hicks &middot; elected 4-yr term</text>
+    </g>
+
+    <!-- DSCC -->
+    <g class="node-group" id="node-dscc" onclick="selectNode('dscc')">
+      <rect x="262" y="128" width="336" height="52" rx="8" fill="#0d2238" stroke="#2f6fa8" stroke-width="1.5"/>
+      <text font-family="Libre Baskerville,serif" font-size="12" font-weight="700" fill="#7aaac8" text-anchor="middle" x="430" y="150">Democratic State Central Committee</text>
+      <text font-family="DM Sans,sans-serif" font-size="10.5" fill="#3a6a8a" text-anchor="middle" x="430" y="168">~2,900 delegates &middot; supreme governing body</text>
+    </g>
+
+    <!-- EXECUTIVE BOARD -->
+    <g class="node-group" id="node-eboard" onclick="selectNode('eboard')">
+      <rect x="295" y="198" width="270" height="50" rx="8" fill="#0d2238" stroke="#2f6fa8" stroke-width="1"/>
+      <text font-family="Libre Baskerville,serif" font-size="12" font-weight="700" fill="#7aaac8" text-anchor="middle" x="430" y="219">Executive Board</text>
+      <text font-family="DM Sans,sans-serif" font-size="10.5" fill="#3a6a8a" text-anchor="middle" x="430" y="237">Meets 3&#215; yearly &middot; acts for DSCC</text>
+    </g>
+
+    <!-- STANDING COMMITTEES — left, y=175 -->
+    <g class="node-group" id="node-committees" onclick="selectNode('committees')">
+      <rect x="40" y="175" width="215" height="52" rx="8" fill="#0d2238" stroke="#2f6fa8" stroke-width="1"/>
+      <text font-family="Libre Baskerville,serif" font-size="11.5" font-weight="700" fill="#7aaac8" text-anchor="middle" x="147" y="196">Standing Committees</text>
+      <text font-family="DM Sans,sans-serif" font-size="10" fill="#3a6a8a" text-anchor="middle" x="147" y="213">9 committees &middot; Chair appoints all</text>
+    </g>
+
+    <!-- RULES COMMITTEE — left, y=248 (clear gap below Standing) -->
+    <g class="node-group" id="node-rules" onclick="selectNode('rules')">
+      <rect x="40" y="248" width="215" height="44" rx="7" fill="#0e2a3e" stroke="#285a82" stroke-width="1"/>
+      <text font-family="DM Sans,sans-serif" font-size="11" font-weight="600" fill="#5a9ac0" text-anchor="middle" x="147" y="266">Rules Committee</text>
+      <text font-family="DM Sans,sans-serif" font-size="9.5" fill="#2f5a78" text-anchor="middle" x="147" y="282">Interprets bylaws &middot; proposes changes</text>
+    </g>
+
+    <!-- CRC — left, y=304 (clear gap below Rules) -->
+    <g class="node-group" id="node-crc" onclick="selectNode('crc')">
+      <rect x="40" y="304" width="215" height="44" rx="7" fill="#0e2a3e" stroke="#285a82" stroke-width="1"/>
+      <text font-family="DM Sans,sans-serif" font-size="11" font-weight="600" fill="#5a9ac0" text-anchor="middle" x="147" y="322">Compliance Review Commission</text>
+      <text font-family="DM Sans,sans-serif" font-size="9.5" fill="#2f5a78" text-anchor="middle" x="147" y="338">CRC &middot; drawn from Rules &amp; Credentials</text>
+    </g>
+
+    <!-- Connector dots between left-column sub-bodies -->
+    <line x1="147" y1="227" x2="147" y2="246" stroke="#285a82" stroke-width="1" stroke-dasharray="2 2" opacity="0.6"/>
+    <line x1="147" y1="292" x2="147" y2="302" stroke="#285a82" stroke-width="1" stroke-dasharray="2 2" opacity="0.5"/>
+
+    <!-- ENDORSING CAUCUSES — right, y=175 -->
+    <g class="node-group" id="node-endorsing" onclick="selectNode('endorsing')">
+      <rect x="610" y="175" width="210" height="52" rx="8" fill="#0d2238" stroke="#2f6fa8" stroke-width="1"/>
+      <text font-family="Libre Baskerville,serif" font-size="11.5" font-weight="700" fill="#7aaac8" text-anchor="middle" x="715" y="196">Endorsing Caucuses</text>
+      <text font-family="DM Sans,sans-serif" font-size="10" fill="#3a6a8a" text-anchor="middle" x="715" y="213">Delegate vote &middot; 60% threshold</text>
+    </g>
+
+    <!-- REGIONAL DIRECTORS — center, y=270 -->
+    <g class="node-group" id="node-regional" onclick="selectNode('regional')">
+      <rect x="330" y="270" width="200" height="46" rx="8" fill="#0d2238" stroke="#2f6fa8" stroke-width="1"/>
+      <text font-family="Libre Baskerville,serif" font-size="11.5" font-weight="700" fill="#7aaac8" text-anchor="middle" x="430" y="289">Regional Directors (~20)</text>
+      <text font-family="DM Sans,sans-serif" font-size="10" fill="#3a6a8a" text-anchor="middle" x="430" y="306">Elected by regions &middot; not by Chair</text>
+    </g>
+
+    <!-- DIVIDER -->
+    <line x1="40" y1="376" x2="820" y2="376" stroke="#122030" stroke-width="1" stroke-dasharray="6 4"/>
+    <text font-family="DM Sans,sans-serif" font-size="9" fill="#1e3a52" text-anchor="middle" x="430" y="372">EXTERNAL ENTITIES &mdash; Chair has no formal bylaw authority here</text>
+
+    <!-- EXTERNALS row, y=390 -->
+    <g class="node-group" id="node-media" onclick="selectNode('media')">
+      <rect x="40" y="390" width="118" height="52" rx="8" fill="#0a1a28" stroke="#1e3a52" stroke-width="1"/>
+      <text font-family="Libre Baskerville,serif" font-size="11" font-weight="700" fill="#3a6080" text-anchor="middle" x="99" y="410">Media &amp;</text>
+      <text font-family="Libre Baskerville,serif" font-size="11" font-weight="700" fill="#3a6080" text-anchor="middle" x="99" y="427">Electorate</text>
+    </g>
+    <g class="node-group" id="node-volunteers" onclick="selectNode('volunteers')">
+      <rect x="168" y="390" width="130" height="52" rx="8" fill="#0a1a28" stroke="#1e3a52" stroke-width="1"/>
+      <text font-family="Libre Baskerville,serif" font-size="11" font-weight="700" fill="#3a6080" text-anchor="middle" x="233" y="410">Volunteers &amp;</text>
+      <text font-family="Libre Baskerville,serif" font-size="11" font-weight="700" fill="#3a6080" text-anchor="middle" x="233" y="427">Activists</text>
+    </g>
+    <g class="node-group" id="node-donors" onclick="selectNode('donors')">
+      <rect x="308" y="390" width="126" height="52" rx="8" fill="#0a1a28" stroke="#1e3a52" stroke-width="1"/>
+      <text font-family="Libre Baskerville,serif" font-size="11" font-weight="700" fill="#3a6080" text-anchor="middle" x="371" y="410">Donors &amp;</text>
+      <text font-family="Libre Baskerville,serif" font-size="11" font-weight="700" fill="#3a6080" text-anchor="middle" x="371" y="427">PACs</text>
+    </g>
+    <g class="node-group" id="node-legleg" onclick="selectNode('legleg')">
+      <rect x="444" y="390" width="150" height="52" rx="8" fill="#0a1a28" stroke="#1e3a52" stroke-width="1"/>
+      <text font-family="Libre Baskerville,serif" font-size="11" font-weight="700" fill="#3a6080" text-anchor="middle" x="519" y="410">Legislative</text>
+      <text font-family="Libre Baskerville,serif" font-size="11" font-weight="700" fill="#3a6080" text-anchor="middle" x="519" y="427">Leaders</text>
+    </g>
+    <g class="node-group" id="node-electeds" onclick="selectNode('electeds')">
+      <rect x="604" y="390" width="176" height="52" rx="8" fill="#0a1a28" stroke="#1e3a52" stroke-width="1"/>
+      <text font-family="Libre Baskerville,serif" font-size="11" font-weight="700" fill="#3a6080" text-anchor="middle" x="692" y="410">Electeds &amp;</text>
+      <text font-family="Libre Baskerville,serif" font-size="11" font-weight="700" fill="#3a6080" text-anchor="middle" x="692" y="427">Candidates</text>
+    </g>
+  </svg>
+</div>
+
+<div class="side-panel" id="sidePanel">
+  <div class="panel-header">
+    <div class="panel-node-label" id="panelLabel">Selected node</div>
+    <div class="panel-title" id="panelTitle">&mdash;</div>
+    <div class="panel-subtitle" id="panelSubtitle"></div>
+    <button class="panel-close" onclick="closePanel()">&#10005;</button>
+  </div>
+  <div class="panel-body" id="panelBody"></div>
+</div>
+</div>
+
+<script>
+const nodeData = {
+  chair: { label:"State Chair", title:"Rusty Hicks", subtitle:"Chief executive officer · elected 4-yr term by full DSCC",
+    powers:[
+      {text:"Chief executive officer and official voice of the Party — carries out policies and purposes.",cite:"Art. III §2a"},
+      {text:"Appoints all members of the 9 standing committees (Finance, Rules, Credentials, Legislation, Organizing, Platform, Resolutions, JEDI, Voter Services).",cite:"Art. V §3"},
+      {text:"Designates the chairs of all Endorsing Caucuses in primary races.",cite:"Art. VIII §3"},
+      {text:"Sets timing and logistics of the Endorsing Convention, including placement of signs and banners.",cite:"Art. VIII §3 / Convention rules"},
+      {text:"Nominates the Independent Ombudsperson (in consultation with statewide officers, subject to E-Board approval).",cite:"Art. III §2a(1)"},
+      {text:"Sets deadlines for candidate filings, Letter of Objection windows, and consent calendar inclusion.",cite:"Art. VIII §3d"},
+      {text:"Fills DSCC membership vacancies when the original appointing authority cannot.",cite:"Art. II §10b(1)"},
+    ],
+    limits:[
+      {text:"Elected — not self-appointed — by the full ~2,900-member DSCC. Must stand for re-election at each reorganizing convention.",cite:"Art. III §3"},
+      {text:"Removal requires written charges from 3 E-Board members OR 30 DSCC members, a formal hearing with due process, and a 2/3 vote of officers.",cite:"Art. II §9c / Art. III §6"},
+      {text:"Cannot change their own salary — the E-Board sets compensation; any decrease requires a 2/3 E-Board vote.",cite:"Art. III §1e"},
+      {text:"Must file quarterly financial disclosure statements for material financial interests (≥$1,000/yr) within 15 days of acquisition.",cite:"Art. II §12e–f"},
+      {text:"All committee appointees must already be credentialed DSCC delegates — cannot appoint outside allies.",cite:"Art. V §3"},
+      {text:"All appointments must adhere to the Equal Division Rule (50% self-identified female).",cite:"Art. I §3d"},
+      {text:"Cannot control the outcome of endorsements — only the process. Votes are conducted by credentialed delegates.",cite:"Art. VIII §3"},
+    ],
+    context:"The Chair is best understood as a CEO with a very active board of directors (the DSCC), a constraining set of bylaws, and no operational authority over the entities that matter most to election outcomes — candidates, donors, PACs, and legislative leaders."
+  },
+  dscc: { label:"Internal body — supreme governing authority", title:"Democratic State Central Committee (DSCC)", subtitle:"~2,900 delegates · supreme governing body of CADEM",
+    powers:[
+      {text:"Elects all statewide officers including the Chair — the Chair's ultimate principal.",cite:"Art. III §3"},
+      {text:"Makes party endorsements in partisan primaries.",cite:"Art. I §2d / Art. VIII"},
+      {text:"Adopts the State Party Platform in gubernatorial years.",cite:"Art. I §2c"},
+      {text:"Removes officers, members, or chartered organizations by formal vote.",cite:"Art. II §9 / Art. III §6"},
+    ],
+    limits:[
+      {text:"Only meets once per year at the State Convention — the Executive Board acts for it between meetings.",cite:"Art. VII §1"},
+      {text:"Roughly one-third of delegates are appointed by electeds who owe no loyalty to the Chair — legislators appoint 5–6 each; legislative leaders appoint 30 each.",cite:"Art. II §3"},
+      {text:"1,120 Assembly District delegates are elected directly by rank-and-file Democrats at ADEM meetings — the Chair has zero influence over these.",cite:"Art. VI §1"},
+    ],
+    context:"The DSCC's composition means the Chair leads a genuinely pluralistic body. No single faction controls it outright. Coalition building is structural, not optional."
+  },
+  eboard: { label:"Internal body", title:"Executive Board", subtitle:"Meets 3× per year · acts on behalf of the DSCC between conventions",
+    powers:[
+      {text:"Sets the Chair's compensation — and can reduce it by 2/3 vote.",cite:"Art. III §1e"},
+      {text:"Acts for the full DSCC on matters arising between conventions.",cite:"Art. VII §1"},
+      {text:"Ratifies the Chair's nomination of the Independent Ombudsperson and Investigators.",cite:"Art. III §2a(1–2)"},
+    ],
+    limits:[
+      {text:"Cannot override a full DSCC vote — the DSCC is supreme.",cite:"Art. I §1"},
+      {text:"The Chair presides over E-Board meetings, giving agenda-setting and procedural leverage.",cite:"Art. III §2a"},
+    ],
+    context:"The E-Board is the primary check on the Chair between conventions. Losing E-Board confidence is politically serious even if formal removal is difficult."
+  },
+  committees: { label:"Internal body — Chair's primary reward lever", title:"Standing Committees (9 total)", subtitle:"Finance · Rules · Credentials · Legislation · Organizing · Platform · Resolutions · JEDI · Voter Services",
+    powers:[
+      {text:"Finance Committee controls the party budget.",cite:"Art. V §5b"},
+      {text:"Credentials Committee determines who votes at conventions.",cite:"Art. V §5a"},
+      {text:"Rules Committee interprets bylaws — can constrain Chair's procedural actions.",cite:"Art. V §5h"},
+      {text:"Platform and Resolutions committees shape Party policy positions.",cite:"Art. V §5f–g"},
+    ],
+    limits:[
+      {text:"Chair appoints all members — but only from existing DSCC delegates, and must observe Equal Division.",cite:"Art. V §3"},
+      {text:"Co-chairs must adhere to the Equal Division Rule.",cite:"Art. V §4"},
+      {text:"Once constituted, committees operate semi-independently — Chair cannot override their decisions.",cite:"Art. V §7"},
+    ],
+    context:"Committee appointment is the Chair's most direct institutional reward power. Who gets appointed signals priorities. The Rules Committee is the referee of rules the Chair must operate within."
+  },
+  rules: { label:"Internal body — structural constraint on Chair", title:"Rules Committee", subtitle:"Standing committee · interprets bylaws · proposes rule changes · hears CRC appeals",
+    powers:[],
+    limits:[
+      {text:"Interprets the bylaws when called upon by the Chair or E-Board — rules on what the Chair is allowed to do.",cite:"Art. V §5h"},
+      {text:"Proposes and reviews all bylaw amendments before they go to the full body.",cite:"Art. V §5h"},
+      {text:"Hears certain appeals from the Compliance Review Commission.",cite:"Art. XII §2e"},
+      {text:"Though appointed by the Chair, operates independently once constituted — the Chair cannot dictate its interpretations.",cite:"Art. V §7"},
+    ],
+    context:"The Rules Committee is the institutional referee. If the Chair stretches authority on endorsement timing, logistics, or appointments, a delegate can bring a challenge and the Rules Committee rules on it."
+  },
+  crc: { label:"Internal body — compliance oversight", title:"Compliance Review Commission (CRC)", subtitle:"Drawn from Rules & Credentials committee members · hears bylaw compliance disputes",
+    powers:[],
+    limits:[
+      {text:"Jurisdiction to hear challenges to the Chair's compliance with bylaws, party rules, and endorsement processes.",cite:"Art. XII §2a"},
+      {text:"The Conduct Commission investigates Code of Conduct violations — including by officers.",cite:"Art. XII §3f"},
+      {text:"Chair nominates the Independent Ombudsperson only in consultation with all statewide officers, subject to E-Board approval.",cite:"Art. III §2a(1)"},
+      {text:"A majority vote of the Conduct Commission can recommend removal of an officer to the statewide officers.",cite:"Art. II §9d"},
+      {text:"Composed of members from the Standing Committees on Credentials and Rules — fully internal to CADEM.",cite:"Art. XII §2"},
+    ],
+    context:"These bodies exist precisely to be independent of the Chair. Rarely activated in practice — but their existence structurally constrains what a Chair can do without accountability. The CRC manages disputes regarding party rules, elections, and endorsements."
+  },
+  endorsing: { label:"Internal process — Chair controls procedure, not outcome", title:"Endorsing Caucuses", subtitle:"Held at conventions · 60% threshold required · Chair controls process, not outcome",
+    powers:[
+      {text:"The Chair designates the presiding officer for each endorsing caucus.",cite:"Art. VIII §3"},
+      {text:"Sets timing, location, and logistical structure of endorsing caucuses.",cite:"Art. VIII §3"},
+      {text:"Sets the deadline and window for Letters of Objection.",cite:"Art. VIII §3d(3)(a)"},
+      {text:"Manages the consent calendar — fast track for uncontested endorsements.",cite:"Art. VIII §3g(12)"},
+    ],
+    limits:[
+      {text:"Endorsement requires 60% of the vote. If no candidate reaches threshold, no endorsement — Chair cannot override.",cite:"Art. VIII §3d"},
+      {text:"Delegates appointed by electeds are ineligible to vote unless registered in that same electoral district.",cite:"Art. VIII §3c"},
+      {text:"A win with less than 2/3 can be challenged via Letter of Objection requiring 300 credentialed signatures.",cite:"Art. VIII §3d(3)(a)"},
+      {text:"20% of members in a district can file a Letter of Objection challenging a caucus outcome.",cite:"Art. VIII §3i"},
+      {text:"Election Appeals Committee reviews contested endorsements — Chair does not adjudicate disputes.",cite:"Art. VIII §3i"},
+    ],
+    context:"The 2026 governor's race and legislative primaries will run through this machinery. The Chair's influence is real but bounded — they set the stage, but delegates hold the vote."
+  },
+  regional: { label:"Internal body — independently elected", title:"Regional Directors (~20)", subtitle:"Elected by regional DSCC members · 2-yr terms · liaison to county parties",
+    powers:[],
+    limits:[
+      {text:"Elected by delegates in each region — not appointed by the Chair.",cite:"Art. III §4b"},
+      {text:"Accountable to their regional delegations, not to the Chair.",cite:"Art. III §4"},
+      {text:"Chair coordinates with Regional Directors but cannot unilaterally direct or remove them.",cite:"Art. III §4d"},
+    ],
+    context:"Regional Directors are the Chair's most important grassroots infrastructure — and the ones most likely to surface friction. A Regional Director from a progressive stronghold may actively oppose the Chair's preferred candidate."
+  },
+  electeds: { label:"External entity — no formal Chair authority", title:"Electeds & Candidates", subtitle:"No formal authority from Chair — relationship is entirely informal",
+    powers:[{text:"CADEM endorsement carries political value — the Chair controls its process and can shape timing.",cite:"Art. VIII"}],
+    limits:[
+      {text:"Chair has NO formal authority over elected officials. Cannot compel electeds to follow party positions.",cite:"Absence of bylaw provision"},
+      {text:"Elected legislators auto-qualify as DSCC members and each get 5–6 appointments — power centers in their own right.",cite:"Art. II §2a / §3a"},
+      {text:"Governor, Lt. Governor, AG and other statewide officers are DSCC members with no obligation to defer to the Chair.",cite:"Art. II §2a, §3c"},
+    ],
+    context:"This is the sharpest edge of the Chair's power gap. Hicks cannot tell Gavin Newsom, Karen Bass, or any legislator what to do. His leverage is entirely reputational and relational."
+  },
+  legleg: { label:"External entity — structural counterweight in DSCC", title:"Legislative Leaders", subtitle:"Speaker of the Assembly · Senate Pro Tem · House Delegation leader",
+    powers:[],
+    limits:[
+      {text:"Each legislative leader independently appoints 30 members to the DSCC — same block collectively divided among ALL statewide officers combined.",cite:"Art. II §3c(1–3)"},
+      {text:"These appointees serve 'at the pleasure of the appointing member' — not the Chair's pleasure.",cite:"Art. II §3d"},
+      {text:"Legislative leaders can mobilize their 30-member blocs against the Chair's preferred DSCC positions.",cite:"Art. II §3c"},
+    ],
+    context:"The Speaker and Senate Pro Tem appointment power is written directly into the bylaws as a structural counterbalance. The Chair must maintain working relationships with legislative leadership — they co-govern the DSCC."
+  },
+  donors: { label:"External entity — no formal relationship", title:"Donors & PACs", subtitle:"No formal role in CADEM · operate entirely outside party structure",
+    powers:[],
+    limits:[
+      {text:"Chair has zero formal authority over donors, PACs, or independent expenditure campaigns.",cite:"Absence of bylaw provision"},
+      {text:"IE campaigns can support candidates contrary to a CADEM endorsement.",cite:"Campaign finance law / FECA"},
+      {text:"Chair's ability to shape donor behavior is entirely a function of personal reputation.",cite:"Informal"},
+    ],
+    context:"California's major labor unions, environmental groups, and tech donors operate independently. Hicks' UFCW background gives him credibility with labor PACs — but not control."
+  },
+  volunteers: { label:"External entity — responds to referent power", title:"Volunteers & Activists", subtitle:"Motivated by ideology · respond to referent power · cannot be commanded",
+    powers:[],
+    limits:[
+      {text:"Cannot be directed by the Chair — self-organize and respond to leadership they respect.",cite:"Informal"},
+      {text:"Progressive caucuses within CADEM maintain their own bylaws and leadership independent of the Chair.",cite:"Art. XI / Caucus bylaws"},
+      {text:"Caucuses may not independently endorse candidates unless CADEM has first done so.",cite:"Art. XI; Progressive Caucus bylaws §XIV"},
+    ],
+    context:"Volunteer energy is the party's most important non-financial resource. The Chair can inspire or alienate it — but cannot command it. This is where referent power matters most."
+  },
+  media: { label:"External entity — Chair is official party voice", title:"Media & Electorate", subtitle:"Chair serves as public face and official spokesperson of the California Democratic Party",
+    powers:[
+      {text:"As 'the official voice of This Committee,' Chair has unilateral authority to issue statements on behalf of CADEM.",cite:"Art. III §2a"},
+      {text:"Controls CADEM's official communications infrastructure and press relationships.",cite:"Art. III §2a"},
+    ],
+    limits:[
+      {text:"Public credibility is contingent on internal party unity. A fractured party undercuts spokesperson authority.",cite:"Informal"},
+      {text:"The electorate is ultimately sovereign — a Chair who loses confidence of rank-and-file Democrats becomes irrelevant.",cite:"Informal"},
+    ],
+    context:"Media and public presence is where referent power is most visible. Hicks' ability to project a unified message is essential to his effectiveness with external actors."
+  }
+};
+
+const powerNodeData = {
+  legitimate: {
+    chair:"Controls the formal machinery: appoints all 9 committee members, designates endorsing caucus chairs, presides over conventions, manages consent calendar. Strongest legitimate power flows downward into CADEM's bureaucracy.",
+    dscc:"The Chair's ultimate principal — elected by this body. Legitimate power flows as accountability upward: the Chair must answer to the DSCC at every convention.",
+    eboard:"The E-Board exercises legitimate power over the Chair on compensation and between-convention decisions. A mutual check — Chair presides but cannot override the board's authority.",
+    committees:"Very strong. The Chair appoints all members — the purest expression of legitimate downward authority within CADEM.",
+    rules:"Moderate. Chair appoints the Rules Committee but once constituted it independently interprets the bylaws — including the Chair's own authority.",
+    crc:"Weak direct authority. Chair nominates the Ombudsperson only in consultation with all officers and subject to E-Board ratification. CRC operates independently.",
+    endorsing:"Procedural control only. Chair sets the stage but delegates hold the legitimate voting power.",
+    regional:"Weak. Regional Directors are independently elected — the Chair has no appointment authority and cannot remove them.",
+    electeds:"None. No bylaw provision gives the Chair formal authority over elected officials.",
+    legleg:"Inversely constrained. Legislative leaders hold independent legitimate power in the DSCC through their own 30-member appointment blocs.",
+    donors:"None whatsoever. Donors operate entirely outside the party's formal structure.",
+    volunteers:"None formal. Caucuses are independently governed under their own bylaws.",
+    media:"Sole legitimate spokesperson — the Chair has formal authority to speak for CADEM officially."
+  },
+  reward: {
+    chair:"Internal reward power is the Chair's primary coercive tool: committee appointments, convention logistics, endorsement timing, consent calendar placement. External reward power is minimal to nonexistent.",
+    dscc:"Cannot reward or punish the DSCC collectively. Individual delegates can be informally rewarded through access and appointments.",
+    eboard:"Limited. The Chair controls E-Board agendas, providing modest procedural reward leverage.",
+    committees:"Highest reward power point: being named to Finance, Rules, or Credentials is a genuine honor and resource within the party. This is the Chair's strongest lever.",
+    rules:"Moderate. Appointment to Rules is a reward; but once appointed, members operate independently.",
+    crc:"Very limited. The CRC is designed to be independent of political reward dynamics.",
+    endorsing:"Meaningful: timing of caucuses and consent calendar placement can tangibly benefit preferred candidates.",
+    regional:"Very limited. Regional Directors answer to their delegations, not the Chair.",
+    electeds:"Near zero. Chair cannot confer legislative resources, committee assignments, or campaign funding.",
+    legleg:"None — legislative leaders can independently reward or punish candidates through their own DSCC bloc.",
+    donors:"None formal. Informal relationship management and endorsement timing are the only indirect tools.",
+    volunteers:"None formal. Moral leadership and inspiration are the only tools — coercion would backfire.",
+    media:"None coercive. Chair can shape narratives but cannot compel coverage."
+  },
+  referent: {
+    chair:"Hicks' personal credibility from UFCW labor leadership is the core source of external influence. Most powerful with labor-aligned delegates, progressive activists, and county party leaders.",
+    dscc:"Moderate. Chair is a known figure but 2,900 delegates hold diverse loyalties and many were appointed by other power centers.",
+    eboard:"Moderate-strong. Long-term relationships with E-Board members build trust — where Hicks' interpersonal skills matter most inside the structure.",
+    committees:"Strong with loyal committee members. Committee chairs often become the Chair's key internal allies.",
+    rules:"Moderate. Rules Committee members were appointed by the Chair, creating some relational loyalty — tempered by professional independence.",
+    crc:"Weak. The CRC is designed for independence; referent power is structurally minimized here.",
+    endorsing:"Moderate. Delegates respond to the Chair's public framing about candidates — but ultimately vote their own preferences.",
+    regional:"Varies widely by region. Labor-heavy regions may respond strongly; progressive strongholds may push back.",
+    electeds:"Key and variable. Electeds who respect Hicks' coalition-building record will take his calls — entirely relationship-dependent.",
+    legleg:"Important and fragile. Relationships with the Speaker and Pro Tem require constant maintenance.",
+    donors:"Strong with labor PACs (UFCW connection). Weaker with tech/business donor community.",
+    volunteers:"High potential but easily lost. Activists respond to authentic, values-driven leadership.",
+    media:"Moderate baseline (Chair covered by default); stronger when Hicks is seen as winning."
+  },
+  expert: {
+    chair:"Deep knowledge of California electoral geography, delegate math, coalition dynamics, and labor-progressive politics. Most valued by candidates seeking navigational guidance through the complex primary landscape.",
+    dscc:"Moderate-strong. Chair knows the body's internal dynamics, delegate math, and regional fault lines better than most members.",
+    eboard:"High. E-Board members frequently defer to the Chair on procedural, strategic, and electoral questions.",
+    committees:"High within committees where the Chair's domain knowledge directly applies.",
+    rules:"Moderate. Chair's procedural expertise is respected, but Rules Committee members have their own bylaw expertise.",
+    crc:"Low. CRC operates on compliance expertise, not political strategy — a different domain.",
+    endorsing:"High. Candidates and campaigns actively seek the Chair's read on delegate sentiment before contests.",
+    regional:"Moderate. Regional Directors have deep local expertise — a peer relationship on local knowledge.",
+    electeds:"Significant. Electeds consult the Chair on reading the primary field and understanding delegate math.",
+    legleg:"Meaningful. Legislative leaders value the Chair's analysis of electoral vulnerabilities and party positioning.",
+    donors:"Limited. Labor donors may seek strategic counsel; others conduct their own research.",
+    volunteers:"Low. Activists have their own issue expertise and don't look to the Chair as a subject-matter authority.",
+    media:"Moderate. Political reporters use the Chair as a source on party dynamics and delegate math."
+  }
+};
+
+let currentView='formal', currentNode=null, currentPowerType='legitimate', panelOpen=false;
+
+function setView(v){
+  currentView=v;
+  const btns=document.querySelectorAll('.view-toggle button');
+  btns[0].classList.toggle('active',v==='formal');
+  btns[1].classList.toggle('active',v==='power');
+  document.getElementById('powerToolbar').classList.toggle('visible',v==='power');
+  document.getElementById('powerDesc').classList.toggle('visible',v==='power');
+  document.getElementById('formalLegend').style.display=v==='formal'?'flex':'none';
+  document.getElementById('powerLegend').style.display=v==='power'?'flex':'none';
+  document.getElementById('formalHint').style.display=v==='formal'?'block':'none';
+  document.getElementById('powerHint').style.display=v==='power'?'block':'none';
+  document.querySelectorAll('.formal-arrow').forEach(el=>el.style.display=v==='formal'?'':'none');
+  if(v==='power') applyPowerType(currentPowerType);
+  else document.querySelectorAll('.arrow-power').forEach(el=>el.style.opacity='0');
+  closePanel();
+}
+
+function setPowerType(type){
+  currentPowerType=type;
+  document.querySelectorAll('.power-btn').forEach(b=>b.classList.toggle('active',b.dataset.type===type));
+  ['legitimate','reward','referent','expert'].forEach(t=>{
+    const el=document.getElementById('desc-'+t);
+    if(el) el.style.display=t===type?'block':'none';
+  });
+  applyPowerType(type);
+  if(currentNode&&panelOpen) renderPanel(currentNode);
+}
+
+function applyPowerType(type){
+  document.querySelectorAll('.arrow-power').forEach(el=>el.style.opacity='0');
+  setTimeout(()=>document.querySelectorAll('.arrow-power.'+type).forEach(el=>el.style.opacity='1'),40);
+}
+
+function selectNode(id){
+  if(currentNode===id&&panelOpen){closePanel();return;}
+  if(currentNode){const p=document.getElementById('node-'+currentNode);if(p)p.classList.remove('selected');}
+  currentNode=id;
+  const el=document.getElementById('node-'+id);
+  if(el) el.classList.add('selected');
+  renderPanel(id);
+  openPanel();
+}
+
+function renderPanel(id){
+  const d=nodeData[id];if(!d)return;
+  document.getElementById('panelLabel').textContent=d.label;
+  document.getElementById('panelTitle').textContent=d.title;
+  document.getElementById('panelSubtitle').textContent=d.subtitle;
+  if(currentView==='formal') renderFormalPanel(d);
+  else renderPowerPanel(id,d);
+}
+
+function renderFormalPanel(d){
+  let h='';
+  if(d.powers&&d.powers.length){
+    h+='<div class="panel-section"><div class="panel-section-label powers">Chair\'s Formal Powers Here</div>';
+    d.powers.forEach(p=>h+=`<div class="panel-item power"><p>${p.text}</p><div class="cite">${p.cite}</div></div>`);
+    h+='</div>';
+  }
+  if(d.limits&&d.limits.length){
+    h+='<div class="panel-section"><div class="panel-section-label limits">Bylaw Constraints on Chair\'s Power</div>';
+    d.limits.forEach(l=>h+=`<div class="panel-item limit"><p>${l.text}</p><div class="cite">${l.cite}</div></div>`);
+    h+='</div>';
+  }
+  if(d.context) h+=`<div class="panel-section"><div class="panel-section-label context">Context &amp; Analysis</div><div class="panel-item ctx"><p>${d.context}</p></div></div>`;
+  document.getElementById('panelBody').innerHTML=h;
+}
+
+function renderPowerPanel(id,d){
+  const pd=powerNodeData[currentPowerType];
+  const lbl={legitimate:'Legitimate Power',reward:'Reward / Coercive Power',referent:'Referent Power',expert:'Expert Power'};
+  const clr={legitimate:'var(--c-legit)',reward:'var(--c-reward)',referent:'var(--c-referent)',expert:'var(--c-expert)'};
+  const c=clr[currentPowerType];
+  const analysis=pd[id]||'No specific analysis for this combination.';
+  let h=`<div class="panel-section"><div class="panel-section-label" style="color:${c}">${lbl[currentPowerType]} &mdash; How it operates here</div><div class="panel-item" style="border-left-color:${c}"><p>${analysis}</p></div></div>`;
+  if(d.context) h+=`<div class="panel-section"><div class="panel-section-label context">Node Overview</div><div class="panel-item ctx"><p>${d.context}</p></div></div>`;
+  const types=['legitimate','reward','referent','expert'];
+  const labels=['Legitimate','Reward','Referent','Expert'];
+  h+='<div class="panel-section"><div class="panel-section-label context">Compare Power Types</div><div style="display:flex;flex-wrap:wrap;gap:6px;">';
+  types.forEach((t,i)=>{
+    const a=t===currentPowerType;
+    h+=`<button onclick="setPowerType('${t}')" style="font-family:\'DM Sans\',sans-serif;font-size:11px;padding:5px 11px;border-radius:12px;border:1.5px solid ${clr[t]};background:${a?clr[t]:'transparent'};color:${a?'#fff':clr[t]};cursor:pointer;">${labels[i]}</button>`;
+  });
+  h+='</div></div>';
+  document.getElementById('panelBody').innerHTML=h;
+}
+
+function openPanel(){
+  document.getElementById('sidePanel').classList.add('open');
+  document.getElementById('diagramArea').classList.add('panel-open');
+  panelOpen=true;
+}
+function closePanel(){
+  document.getElementById('sidePanel').classList.remove('open');
+  document.getElementById('diagramArea').classList.remove('panel-open');
+  if(currentNode){const el=document.getElementById('node-'+currentNode);if(el)el.classList.remove('selected');}
+  currentNode=null;panelOpen=false;
+}
+setView('formal');
+</script>
+</body>
+</html>
